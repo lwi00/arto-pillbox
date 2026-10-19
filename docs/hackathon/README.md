@@ -6,6 +6,7 @@ Working documents for the hackathon entry. User-facing documentation is in the
 | Document | Contents |
 | --- | --- |
 | [Plan](plan.md) | Repositories, phases and status, tasks, risks, scope. |
+| [Devpost submission draft](devpost-submission.md) | Copy-ready texts for every Devpost field, with a status check of what is still missing. |
 | [Demo and submission](demo-and-submission.md) | Video script, submission checklist, disclosure text, feedback and friction log templates. |
 | [Alexa+ compliance](../alexa-plus-compliance.md) | Requirement matrix with code and test evidence. |
 
