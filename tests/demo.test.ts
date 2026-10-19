@@ -64,3 +64,11 @@ test('the demo clock jumps to a local time and back', () => {
   clock.reset();
   assert.equal(clock.shifted, false);
 });
+
+test('a demo reset counts the simulated day as monitored, so the window in progress is not interrupted', async () => {
+  await env.pillbox.resetState();
+  await env.settle();
+  const morning = env.pillbox.status().slots[0];
+  assert.equal(morning.state, 'overdue');
+  assert.equal(morning.trackingInterrupted, false);
+});

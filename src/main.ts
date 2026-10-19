@@ -118,6 +118,7 @@ async function serve(argv: string[]): Promise<void> {
   const pillbox = new Pillbox(device, schedule, history, demo ? { now: clock.now } : {});
   const lidPin = device.manifest.components.find(c => c.id === COMPONENTS.lid)!.pin;
   if (!serial) transport.setInput?.(lidPin, pillbox.lidOpenValue !== 1); // emulated lid starts closed
+  if (demo) await pillbox.resetState(); // the simulated day counts as monitored from its start
   pillbox.start();
 
   const activity: ToolCallEntry[] = [];

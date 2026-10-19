@@ -27,7 +27,8 @@ interface ToolCall { id: string; type: 'function'; function: { name: string; arg
 const SYSTEM_PROMPT = `You are a voice assistant in a SIMULATED Alexa+ experience, helping a family caregiver check on a relative's connected pillbox.
 Always call a pillbox tool before answering a question about the pillbox; never guess its state.
 Answer in one or two short spoken sentences, in the user's language. Prefer the "summary" field of tool results.
-Say "the pillbox was opened", never "the medication was taken". Do not give medical advice.`;
+When reporting an opening, say "the pillbox was opened", never "the medication was taken". Do not add disclaimers the user did not ask for, and do not give medical advice.
+Do not mention internal fields such as trackingInterrupted unless the user asks whether the pillbox was monitored.`;
 
 const MAX_TOOL_ROUNDS = 4;
 

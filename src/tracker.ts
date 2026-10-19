@@ -71,10 +71,15 @@ export class IntakeTracker extends EventEmitter {
   /**
    * Forgets the lid state and monitoring continuity, as after a restart.
    * Intended for demonstrations that move the clock.
+   *
+   * Args:
+   *   monitoredSince: If given, treat the lid as monitored without gaps up to this
+   *     time, so the window in progress is not marked as interrupted. Only the demo,
+   *     whose whole day is simulated, should pass it.
    */
-  reset(): void {
+  reset(monitoredSince?: Date): void {
     this.lastRaw = undefined; this.stable = undefined; this.openSince = undefined; this.counted = false;
-    this.lastValidAt = undefined;
+    this.lastValidAt = monitoredSince;
   }
 
   /** Debounced lid state: `true` open, `false` closed, `undefined` not yet known. */

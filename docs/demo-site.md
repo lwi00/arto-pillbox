@@ -47,6 +47,7 @@ transport, authentication and tools as an external client.
 | Emulated board only (`--demo` refuses `--serial`). | Anyone can open the virtual lid. |
 | The clock starts at 09:45 local time (`PILLBOX_DEMO_START`). | Visitors first see an overdue dose, the most telling state. |
 | Scenario buttons shift the clock and clear the in-memory history. | History must stay chronological. |
+| After a start or a scenario jump, the simulated day counts as monitored from its start. | Otherwise every demo window would show as interrupted and end as `unknown`. A real deployment never assumes this. |
 | History is kept in memory only. | Scenarios rewrite time. |
 | Chat limited to 12 requests per minute for the whole site; messages up to 500 characters; 8 previous turns. | Protects the free model quota. |
 | Without `PILLBOX_MASTER_TOKEN`, a random secret is generated. | The page works out of the box; external MCP clients need the variable to be set. |

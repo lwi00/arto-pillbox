@@ -98,7 +98,8 @@ export class Pillbox {
    * Stops any reminder and forgets history and tracker state.
    *
    * Intended for the demo site, which jumps the clock to a scenario. History records
-   * must stay chronological, so the in-memory history is cleared with the jump.
+   * must stay chronological, so the in-memory history is cleared with the jump. The
+   * simulated day counts as monitored from its start.
    *
    * Returns:
    *   A promise that settles once outputs are cleared.
@@ -106,7 +107,7 @@ export class Pillbox {
   async resetState(): Promise<void> {
     await this.stopReminder('demo reset');
     this.history.clear();
-    this.tracker.reset();
+    this.tracker.reset(this.now());
   }
 
   /**
