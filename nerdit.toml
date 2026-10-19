@@ -1,0 +1,14 @@
+# Deployment of the public demo site on Nerdit (https://nerdit.ai).
+# The demo drives an emulated Uno; see docs/demo-site.md.
+
+[deploy]
+name = "pillbox"
+port = 8000
+start = "node dist/main.js serve --demo --bind 0.0.0.0 --listen 8000"
+health = "/healthz"
+
+# Chat model for the simulated Alexa+ assistant, through the machine AI gateway.
+# Injected as OPENAI_BASE_URL, OPENAI_API_KEY and OPENAI_MODEL.
+[ai.default]
+provider = "gateway"
+model = "minimax-m3-1-flash-free"

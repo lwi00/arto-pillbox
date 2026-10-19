@@ -39,7 +39,8 @@ export class Pillbox {
   readonly tracker: IntakeTracker;
   /** Lid reading that means "open", derived from the manifest interlock. */
   readonly lidOpenValue: 0 | 1;
-  private readonly now: () => Date;
+  /** Clock used for every decision. */
+  readonly now: () => Date;
   private readonly pollMs: number;
   private readonly cooldownMs: number;
   private poller?: NodeJS.Timeout;
@@ -91,6 +92,21 @@ export class Pillbox {
     if (this.poller) clearInterval(this.poller);
     this.poller = undefined;
     await this.stopReminder('service stopping');
+  }
+
+  /**
+   * Stops any reminder and forgets history and tracker state.
+   *
+   * Intended for the demo site, which jumps the clock to a scenario. History records
+   * must stay chronological, so the in-memory history is cleared with the jump.
+   *
+   * Returns:
+   *   A promise that settles once outputs are cleared.
+   */
+  async resetState(): Promise<void> {
+    await this.stopReminder('demo reset');
+    this.history.clear();
+    this.tracker.reset();
   }
 
   /**

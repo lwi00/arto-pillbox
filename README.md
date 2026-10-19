@@ -56,6 +56,14 @@ cloudflared tunnel --url http://127.0.0.1:8080
 node dist/main.js serve --serial /dev/ttyACM0 --allowed-host <name>.trycloudflare.com
 ```
 
+## Demo site
+
+`node dist/main.js serve --demo` adds a public page: an emulated pillbox you can
+open and close, scenario buttons that move the clock, a live log of MCP tool calls,
+and a **simulated Alexa+ assistant** (typed or spoken) whose language model answers
+by calling the pillbox tools through the same `/mcp` endpoint Alexa+ would use. The
+demo is deployed on Nerdit with `nerdit.toml`. See [docs/demo-site.md](docs/demo-site.md).
+
 ## Alexa+ track compliance
 
 | Requirement | How |
@@ -77,6 +85,7 @@ Every requirement is mapped to code and a test in
 | [MCP tool reference](docs/mcp-tools.md) | Inputs, outputs, refusals, example session. |
 | [Alexa+ compliance](docs/alexa-plus-compliance.md) | Requirement matrix with evidence. |
 | [Testing](docs/testing.md) | Test suites and manual checks. |
+| [Demo site](docs/demo-site.md) | Public demo page, simulated Alexa+ assistant, Nerdit deployment. |
 | [Hackathon](docs/hackathon/README.md) | Plan, demo script, submission checklist. |
 
 ## Project layout
@@ -92,6 +101,10 @@ src/pillbox.ts                  polling, reminders, status
 src/tracker.ts                  intake detection and monitoring coverage
 src/schedule.ts                 schedule validation, time zones
 src/history.ts                  JSONL history
+src/demo/assistant.ts           simulated Alexa+ assistant: model loop over MCP tools
+src/demo/site.ts                demo routes and scenario clock
+public/index.html               demo page
+nerdit.toml                     Nerdit deployment of the demo
 tests/                          conformance, tracker and emulated-hardware tests
 docs/                           documentation
 ```

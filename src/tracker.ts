@@ -68,6 +68,15 @@ export class IntakeTracker extends EventEmitter {
     this.maxGapMs = options.maxGapMs ?? 10_000;
   }
 
+  /**
+   * Forgets the lid state and monitoring continuity, as after a restart.
+   * Intended for demonstrations that move the clock.
+   */
+  reset(): void {
+    this.lastRaw = undefined; this.stable = undefined; this.openSince = undefined; this.counted = false;
+    this.lastValidAt = undefined;
+  }
+
   /** Debounced lid state: `true` open, `false` closed, `undefined` not yet known. */
   get lidOpen(): boolean | undefined { return this.stable; }
 

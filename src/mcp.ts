@@ -7,6 +7,23 @@ import type { SlotStatus } from './tracker.js';
 export const ROLES = ['alexa', 'agent'] as const;
 export type Role = (typeof ROLES)[number];
 
+/** One tool invocation, reported to {@link PillboxServerOptions.onToolCall}. */
+export interface ToolCallEntry {
+  at: string;
+  role: Role;
+  tool: string;
+  arguments: Record<string, unknown>;
+  isError: boolean;
+  /** The result's `summary`, or the error message. */
+  summary: string;
+}
+
+/** Options for {@link createPillboxServer}. */
+export interface PillboxServerOptions {
+  /** Called after every tool invocation, for activity logs and the demo page. */
+  onToolCall?: (entry: ToolCallEntry) => void;
+}
+
 /** Server identity reported in the MCP `initialize` result. */
 export const SERVER_INFO = { name: 'arto-pillbox', title: 'Arto Pillbox', version: '0.1.0' } as const;
 
@@ -65,15 +82,28 @@ function failure(error: unknown) {
  *   pillbox: The running pillbox service.
  *   role: Authenticated client role. It is recorded with reminders and selects
  *     the tool set.
+ *   options: Optional hooks.
  *
  * Returns:
  *   A configured `McpServer`, not yet connected to a transport.
  */
-export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
+export function createPillboxServer(pillbox: Pillbox, role: Role, options: PillboxServerOptions = {}): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
+  // Same signature as server.registerTool, with every result reported to onToolCall.
+  // A tool without inputSchema receives the request context instead of arguments.
+  type Result = { content: Array<{ type: 'text'; text: string }>; structuredContent?: Record<string, unknown>; isError?: boolean };
+  const register = (name: string, config: object, handler: (args: Record<string, unknown>) => Promise<Result>) =>
+    (server.registerTool as (n: string, c: object, h: (args: Record<string, unknown>) => Promise<Result>) => unknown)(name, config, async (args = {}) => {
+      const outcome = await handler(args);
+      options.onToolCall?.({
+        at: new Date().toISOString(), role, tool: name, arguments: 'inputSchema' in config ? args : {}, isError: Boolean(outcome.isError),
+        summary: String(outcome.structuredContent?.summary ?? outcome.content[0]?.text ?? ''),
+      });
+      return outcome;
+    });
   const slotIds = pillbox.schedule.slots.map(s => s.id) as [string, ...string[]];
 
-  server.registerTool('get_intake_status', {
+  register('get_intake_status', {
     title: 'Pillbox status',
     description: 'Report whether the pillbox lid was opened during each dose window today (or on a given date), what is still due, and whether a reminder is playing. An opening does not prove the medication was taken.',
     inputSchema: { date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Local date YYYY-MM-DD. Defaults to today.') },
@@ -85,7 +115,8 @@ export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
       device: z.object({ status: z.string(), transport: z.string() }),
     },
     annotations: readOnly,
-  }, async ({ date }) => {
+  }, async args => {
+    const { date } = args as { date?: string };
     try {
       const status = pillbox.status(date);
       const offline = status.device.status === 'ready' ? '' : ' Warning: the pillbox is currently not connected.';
@@ -93,7 +124,7 @@ export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
     } catch (error) { return failure(error); }
   });
 
-  server.registerTool('get_intake_history', {
+  register('get_intake_history', {
     title: 'Pillbox history',
     description: 'Summarize the last days of dose windows: when the pillbox was opened, missed windows and windows that could not be tracked.',
     inputSchema: { days: z.number().int().min(1).max(14).default(7).describe('Number of days including today.') },
@@ -103,7 +134,8 @@ export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
       totals: z.object({ opened: z.number().int(), missed: z.number().int(), unknown: z.number().int() }),
     },
     annotations: readOnly,
-  }, async ({ days }) => {
+  }, async args => {
+    const { days } = args as { days: number };
     try {
       const history = pillbox.historyFor(days);
       const { opened, missed, unknown } = history.totals;
@@ -112,7 +144,7 @@ export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
     } catch (error) { return failure(error); }
   });
 
-  server.registerTool('trigger_reminder', {
+  register('trigger_reminder', {
     title: 'Play a reminder',
     description: 'Turn on the pillbox light and buzzer for a few seconds to remind the person to take a dose. Only allowed while the dose is pending or overdue; it stops by itself, when the lid opens, or with stop_reminder.',
     inputSchema: {
@@ -121,14 +153,15 @@ export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
     },
     outputSchema: { summary: z.string(), slot: z.string(), endsAt: z.string(), outputs: z.object({ reminder_led: z.number().optional(), buzzer: z.number().optional() }) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-  }, async ({ slot, seconds }) => {
+  }, async args => {
+    const { slot, seconds } = args as { slot: string; seconds: number };
     try {
       const started = await pillbox.triggerReminder(slot, seconds, role);
       return result({ summary: `The reminder is playing for ${seconds} seconds.`, ...started });
     } catch (error) { return failure(error); }
   });
 
-  server.registerTool('stop_reminder', {
+  register('stop_reminder', {
     title: 'Stop the reminder',
     description: 'Turn off the pillbox light and buzzer immediately.',
     outputSchema: { summary: z.string(), stopped: z.boolean() },
@@ -140,7 +173,7 @@ export function createPillboxServer(pillbox: Pillbox, role: Role): McpServer {
     } catch (error) { return failure(error); }
   });
 
-  server.registerTool('get_device_health', {
+  register('get_device_health', {
     title: 'Pillbox connection',
     description: 'Check whether the pillbox hardware is connected, whether it is emulated, and when each sensor was last read.',
     outputSchema: {

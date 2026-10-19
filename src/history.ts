@@ -82,6 +82,12 @@ export class HistoryStore {
     return this.items.filter(r => r.date === date && (slot === undefined || r.slot === slot) && (type === undefined || r.type === type)) as Extract<HistoryRecord, { type: T }>[];
   }
 
+  /**
+   * Forgets every in-memory record. The JSONL file, if any, is left untouched.
+   * Intended for demonstrations that replay a scenario.
+   */
+  clear(): void { this.items.length = 0; }
+
   /** All records in insertion order. */
   all(): readonly HistoryRecord[] { return this.items; }
 }

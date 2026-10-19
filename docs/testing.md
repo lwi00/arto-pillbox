@@ -14,6 +14,7 @@ hardware, no network access and no credentials.
 | --- | --- | --- |
 | `tests/conformance.test.ts` | HTTP endpoint and MCP protocol | Compliance with MCP 2025-11-25 Streamable HTTP and the security checks. Each test maps to a row of [the compliance matrix](alexa-plus-compliance.md). |
 | `tests/tracker.test.ts` | Intake tracker and schedule | Status transitions, debounce, minimum open time, attribution, coverage and gaps, time zones, schedule validation. Pure logic with an injected clock. |
+| `tests/demo.test.ts` | Demo assistant and clock | The model loop calls tools through the real MCP endpoint, strips reasoning blocks, records the role, reports model errors; Nerdit variables; scenario clock. Uses a fake model. |
 | `tests/pillbox.test.ts` | Domain service with the emulated board | Reminder lifecycle, the firmware interlock, refusals, rate limiting, openings reported with local time. |
 
 `tests/helpers.ts` starts an emulated pillbox with its MCP endpoint on an ephemeral

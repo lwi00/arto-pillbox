@@ -25,7 +25,7 @@ export interface McpHttpOptions<R extends string> {
   /** Builds a fresh MCP server for one authenticated request. */
   createServer: (role: R) => McpServer;
   /** Called for each handled request, for logging. */
-  onRequest?: (entry: { role?: R; status: number; method?: string; path: string }) => void;
+  onRequest?: (entry: { role?: R; status: number; method?: string; path: string; host?: string }) => void;
 }
 
 /**
@@ -74,7 +74,7 @@ export function createMcpHttpHandler<R extends string>(options: McpHttpOptions<R
     const finish = (status: number, body?: unknown, headers: Record<string, string> = {}) => {
       res.writeHead(status, { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers });
       res.end(body === undefined ? undefined : JSON.stringify(body));
-      options.onRequest?.({ role, status, method: req.method, path });
+      options.onRequest?.({ role, status, method: req.method, path, host: req.headers.host });
     };
     const rpcError = (status: number, code: number, message: string, headers?: Record<string, string>) =>
       finish(status, { jsonrpc: '2.0', error: { code, message }, id: null }, headers);

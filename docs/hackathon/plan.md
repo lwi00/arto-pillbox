@@ -25,9 +25,9 @@ clients. This is the Open Source submission.
 | 0. Verify access | D1 | Alexa+ path chosen, AWS Region and model chosen. | Waiting for the user |
 | 1. MCP server and pillbox domain | D1 to D4 | Streamable HTTP endpoint, tools, tracker, reminders, conformance tests. | Done |
 | 2. Physical board | D4 to D5 | Wiring, firmware flashed, checklist in [testing](../testing.md#physical-board-checklist) passed. | To do |
-| 3. Alexa+ integration | D5 to D8 | Alexa+ calls the pillbox through a tunnel, or the simulated path works. | To do |
+| 3. Alexa+ integration | D5 to D8 | Alexa+ calls the pillbox through a tunnel or the Nerdit address. The simulated path is done (demo site). | In progress |
 | 4. Strands and Bedrock agent | D7 to D10 | Missed-dose reminders and caregiver email through Amazon SNS. | To do |
-| 5. Dashboard | D9 to D10 | Local web page showing lid, outputs, slots and recent tool calls, for the video. | To do |
+| 5. Demo site | D9 to D10 | Public page: emulated pillbox, scenarios, MCP activity, simulated Alexa+ chat; deployed on Nerdit. | Done (see [demo site](../demo-site.md)) |
 | 6. Open Source contribution | D10 to D11 | Pull request to `lwi00/arto` with the HTTP mode. | To do |
 | 7. Hosted backup | D11 to D12 | Emulated pillbox on AWS with HTTPS. | Optional |
 | 8. Video and submission | D12 to D15 | Video under 3 minutes, feedback, friction log, repository access. | To do |
@@ -97,11 +97,11 @@ Delivered:
    at most one message per slot and day.
 5. Flags: `--once` for a single run, `--dry-run` to print the message instead of publishing it.
 
-## Phase 5: Dashboard
+## Phase 5: Demo site (done)
 
-A loopback-only page served by the same process: lid state, LED and buzzer, today's
-slots, recent history and the last tool calls with their role. In emulated mode it
-also offers open and close buttons for the lid, protected by a per-process control token.
+`--demo` serves a public page with the emulated pillbox, scenario clock, MCP activity
+log and a simulated Alexa+ chat backed by `minimax/minimax-m3.1-flash:free` through
+the Nerdit AI gateway. It doubles as phase 3B. See [demo site](../demo-site.md).
 
 ## Phase 6: Open Source contribution
 

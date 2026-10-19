@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arto Pillbox Demo</title>
+<meta name="description" content="A connected pillbox on an emulated Arduino, exposed as a self-hosted MCP server (spec 2025-11-25, Streamable HTTP), with a simulated Alexa+ assistant.">
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e1d9;
+    --accent: #2f6f5e; --accent-ink: #ffffff; --warn: #b4560f; --bad: #b42318; --ok: #2f6f5e; --info: #3b5ba9;
+    --led-off: #d9d6cc; --led-on: #f5a524; --box: #c9d8d2; --box-dark: #9db8ae; --lid: #a9c4ba;
+    --bubble-user: #e8efe9; --bubble-bot: #f1efe9; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141513; --panel: #1d1f1c; --ink: #ecebe6; --muted: #9a998f; --line: #2e312c;
+      --accent: #5fb39c; --accent-ink: #0f1a16; --warn: #f0a35e; --bad: #f47066; --ok: #5fb39c; --info: #8fa8e8;
+      --led-off: #3a3d37; --led-on: #ffb938; --box: #2f4740; --box-dark: #24372f; --lid: #3d5c52;
+      --bubble-user: #233229; --bubble-bot: #26281f; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); min-width: 0; }
+  .stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
+  button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 8px 12px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  code { font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
+
+  .device { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px; align-items: center; }
+  @media (max-width: 420px) { .device { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+  svg.box { width: 170px; height: 150px; }
+  .lid { transform-origin: 20px 62px; transition: transform .35s ease; }
+  .lid.open { transform: rotate(-38deg); }
+  .led { transition: fill .2s; }
+  .waves { opacity: 0; transition: opacity .2s; }
+  .waves.on { opacity: 1; animation: pulse .6s infinite alternate; }
+  @keyframes pulse { from { opacity: .35; } to { opacity: 1; } }
+  .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; font-weight: 600; }
+
+  .slots { display: grid; gap: 8px; margin-top: 14px; }
+  .slot { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .chip { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 10px; white-space: nowrap; border: 1px solid currentColor; }
+  .chip.upcoming { color: var(--muted); } .chip.pending { color: var(--info); } .chip.overdue { color: var(--warn); }
+  .chip.opened { color: var(--ok); } .chip.missed { color: var(--bad); } .chip.unknown { color: var(--muted); border-style: dashed; }
+
+  .chat { display: flex; flex-direction: column; height: 560px; min-width: 0; }
+  @media (max-width: 860px) { .chat { height: 520px; } }
+  .messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 12px; }
+  .msg { max-width: 88%; padding: 10px 12px; border-radius: 12px; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--bubble-user); }
+  .msg.bot { align-self: flex-start; background: var(--bubble-bot); }
+  .msg.error { color: var(--bad); }
+  .trace { margin-top: 8px; display: grid; gap: 4px; }
+  .trace div { font-size: 12.5px; color: var(--muted); }
+  .trace b { color: var(--ink); font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .composer { display: flex; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .composer input { flex: 1; min-width: 0; font: inherit; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .mic.listening { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .suggestions button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
+
+  .activity { display: grid; gap: 6px; max-height: 280px; overflow-y: auto; }
+  .act { font-size: 13px; border-bottom: 1px solid var(--line); padding-bottom: 6px; overflow-wrap: anywhere; }
+  .act .who { font-weight: 600; } .act .err { color: var(--bad); }
+  footer { margin-top: 24px; font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Arto Pillbox</h1>
+    <span class="tag">Self-hosted MCP server · spec 2025-11-25 · Streamable HTTP</span>
+    <span class="tag">Arduino Uno emulated in AVR8js</span>
+  </header>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="panel" aria-labelledby="device-title">
+        <h2 id="device-title">The pillbox</h2>
+        <div class="device">
+          <svg class="box" viewBox="0 0 170 150" role="img" aria-label="Pillbox drawing">
+            <rect x="20" y="62" width="130" height="76" rx="10" fill="var(--box)" stroke="var(--box-dark)" stroke-width="2"/>
+            <g id="lid" class="lid">
+              <rect x="20" y="50" width="130" height="14" rx="6" fill="var(--lid)" stroke="var(--box-dark)" stroke-width="2"/>
+            </g>
+            <circle id="led" class="led" cx="55" cy="95" r="10" fill="var(--led-off)" stroke="var(--box-dark)" stroke-width="2"/>
+            <text x="55" y="126" text-anchor="middle" font-size="10" fill="var(--muted)">light</text>
+            <rect x="104" y="86" width="18" height="18" rx="4" fill="var(--box-dark)"/>
+            <g id="waves" class="waves" stroke="var(--led-on)" stroke-width="2" fill="none" stroke-linecap="round">
+              <path d="M127 90 q4 5 0 10"/><path d="M132 87 q7 8 0 16"/>
+            </g>
+            <text x="113" y="126" text-anchor="middle" font-size="10" fill="var(--muted)">buzzer</text>
+          </svg>
+          <div>
+            <dl class="facts">
+              <dt>Lid</dt><dd id="lidState">…</dd>
+              <dt>Light</dt><dd id="ledState">…</dd>
+              <dt>Buzzer</dt><dd id="buzzerState">…</dd>
+              <dt>Board</dt><dd id="boardState">…</dd>
+              <dt>Local time</dt><dd id="clock">…</dd>
+            </dl>
+            <div class="row" style="margin-top:12px">
+              <button id="lidButton" class="primary">Open the lid</button>
+            </div>
+          </div>
+        </div>
+        <div class="slots" id="slots" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="scenario-title">
+        <h2 id="scenario-title">Scenario</h2>
+        <p class="small muted" style="margin:0 0 10px">Jump the demo clock and start the day over. The emulated board keeps running.</p>
+        <div class="row">
+          <button data-time="08:15">08:15 · morning due soon</button>
+          <button data-time="09:45">09:45 · morning overdue</button>
+          <button data-time="19:30">19:30 · evening due soon</button>
+          <button data-time="">Real time</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="activity-title">
+        <h2 id="activity-title">MCP activity</h2>
+        <p class="small muted" style="margin:0 0 10px">Every <code>tools/call</code> received on <code id="endpoint">/mcp</code>, from this page's assistant or any external client such as Alexa+.</p>
+        <div class="activity" id="activity"><span class="small muted">No tool calls yet.</span></div>
+      </section>
+    </div>
+
+    <section class="panel chat" aria-labelledby="chat-title">
+      <h2 id="chat-title">Simulated Alexa+ experience</h2>
+      <p class="small muted" style="margin:0 0 10px" id="modelLine">The assistant answers by calling the pillbox's MCP tools over Streamable HTTP, exactly like an Alexa+ add-on would.</p>
+      <div class="suggestions" id="suggestions">
+        <button>Did she open her pillbox this morning?</button>
+        <button>Remind her to take her morning pills</button>
+        <button>How did this week go?</button>
+        <button>Is the pillbox connected?</button>
+      </div>
+      <div class="messages" id="messages" aria-live="polite"></div>
+      <form class="composer" id="composer">
+        <button type="button" class="mic" id="mic" title="Speak" aria-label="Speak">🎤</button>
+        <input id="input" autocomplete="off" maxlength="500" placeholder="Ask about the pillbox…" aria-label="Message">
+        <button class="primary" id="send">Ask</button>
+      </form>
+      <label class="small muted" style="margin-top:8px"><input type="checkbox" id="speak" checked> Read replies aloud</label>
+    </section>
+  </div>
+
+  <footer>
+    <div>Not a medical device. An opened lid does not prove that medication was taken.</div>
+    <div>Hackathon demo: a simulated Alexa+ experience, not an Amazon product. Source: <a href="https://github.com/lwi00/arto-pillbox">github.com/lwi00/arto-pillbox</a>, built on <a href="https://github.com/lwi00/arto">Arto</a>.</div>
+  </footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const STATE_LABEL = { upcoming: 'Not due yet', pending: 'Due soon', overdue: 'Overdue', opened: 'Opened', missed: 'Missed', unknown: 'Unknown' };
+const history = [];
+let lidOpen = false;
+let busy = false;
+
+$('endpoint').textContent = new URL('mcp', location.href).href;
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const child of children) node.append(child);
+  return node;
+}
+
+function render(state) {
+  const s = state.status;
+  lidOpen = s.lidOpen === true;
+  $('lid').classList.toggle('open', lidOpen);
+  $('lidState').textContent = s.lidOpen === null ? 'unknown' : lidOpen ? 'open' : 'closed';
+  $('lidButton').textContent = lidOpen ? 'Close the lid' : 'Open the lid';
+  const led = state.outputs.reminderLed === 1, buzz = state.outputs.buzzer === 1;
+  $('led').setAttribute('fill', led ? 'var(--led-on)' : 'var(--led-off)');
+  $('waves').classList.toggle('on', buzz);
+  $('ledState').textContent = led ? 'on' : 'off';
+  $('buzzerState').textContent = buzz ? 'sounding' : 'silent';
+  $('boardState').textContent = state.health.status + (state.health.emulated ? ' (emulated)' : '');
+  $('clock').textContent = `${s.localTime} ${s.timeZone}${state.clockShifted ? ' (demo clock)' : ''}`;
+
+  $('slots').replaceChildren(...s.slots.map(slot => el('div', { className: 'slot' },
+    el('div', {}, el('div', { textContent: slot.label, style: 'font-weight:600' }),
+      el('div', { className: 'small muted', textContent: `${slot.window.opens}–${slot.window.closes}, due ${slot.window.due}` + (slot.openedAt ? ` · opened ${slot.openedAt}` : '') + (slot.reminders ? ` · ${slot.reminders} reminder${slot.reminders > 1 ? 's' : ''}` : '') })),
+    el('span', { className: `chip ${slot.state}`, textContent: STATE_LABEL[slot.state] || slot.state }))));
+
+  const acts = state.activity;
+  $('activity').replaceChildren(...(acts.length ? acts.map(a => el('div', { className: 'act' },
+    el('span', { className: 'muted', textContent: new Date(a.at).toLocaleTimeString() + ' · ' }),
+    el('span', { className: 'who', textContent: a.role }), ' → ',
+    el('code', { textContent: a.tool }), ' ',
+    el('span', { className: a.isError ? 'err' : 'muted', textContent: a.summary }))) : [el('span', { className: 'small muted', textContent: 'No tool calls yet.' })]));
+
+  if (!state.assistant.available) {
+    $('modelLine').textContent = 'No chat model is configured on this server; the pillbox and the MCP endpoint still work.';
+    $('send').disabled = true;
+  } else {
+    $('modelLine').textContent = `The assistant (${state.assistant.model}) answers by calling the pillbox's MCP tools over Streamable HTTP, exactly like an Alexa+ add-on would.`;
+  }
+}
+
+async function refresh() {
+  try { render(await api('api/state')); } catch { /* keep the last view */ }
+}
+
+$('lidButton').addEventListener('click', async () => {
+  await api('api/lid', { open: !lidOpen }).catch(() => {});
+  setTimeout(refresh, 700);
+});
+
+document.querySelectorAll('[data-time]').forEach(button => button.addEventListener('click', async () => {
+  const time = button.dataset.time || null;
+  render(await api('api/scenario', { time }));
+  addMessage('bot', time ? `Demo clock set to ${time}. The day starts over.` : 'Back to real time. The day starts over.');
+}));
+
+function addMessage(kind, text, trace) {
+  const bubble = el('div', { className: `msg ${kind}`, textContent: text });
+  if (trace && trace.length) {
+    bubble.append(el('div', { className: 'trace' }, ...trace.map(step =>
+      el('div', {}, 'MCP ', el('b', { textContent: step.tool }), ` → ${step.summary}`))));
+  }
+  $('messages').append(bubble);
+  $('messages').scrollTop = $('messages').scrollHeight;
+  return bubble;
+}
+
+function speak(text) {
+  if (!$('speak').checked || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+
+async function ask(text) {
+  text = text.trim();
+  if (!text || busy) return;
+  busy = true; $('send').disabled = true;
+  addMessage('user', text);
+  const pending = addMessage('bot', '…');
+  try {
+    const { reply, trace } = await api('api/chat', { message: text, history: history.slice(-8) });
+    pending.remove();
+    addMessage('bot', reply, trace);
+    history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
+    speak(reply);
+  } catch (error) {
+    pending.remove();
+    addMessage('bot error', error.message);
+  } finally {
+    busy = false; $('send').disabled = false;
+    refresh();
+  }
+}
+
+$('composer').addEventListener('submit', event => { event.preventDefault(); const text = $('input').value; $('input').value = ''; ask(text); });
+$('suggestions').addEventListener('click', event => { if (event.target.tagName === 'BUTTON') ask(event.target.textContent); });
+
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!Recognition) $('mic').style.display = 'none';
+else {
+  const recognition = new Recognition();
+  recognition.lang = navigator.language || 'en-US';
+  recognition.interimResults = false;
+  recognition.onresult = event => ask(event.results[0][0].transcript);
+  recognition.onend = () => $('mic').classList.remove('listening');
+  recognition.onerror = () => $('mic').classList.remove('listening');
+  $('mic').addEventListener('click', () => { $('mic').classList.add('listening'); recognition.start(); });
+}
+
+addMessage('bot', 'Hi! Ask me about the pillbox — for example, whether it was opened this morning.');
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>

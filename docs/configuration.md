@@ -87,10 +87,14 @@ arto-pillbox tokens
 | `--bind <address>` | `127.0.0.1` | Interface. Keep loopback unless a trusted reverse proxy runs on another host. |
 | `--allowed-host <host>` | none | Extra accepted `Host` value, such as a tunnel hostname. Repeatable. Loopback hosts on the chosen port are always accepted. |
 | `--allowed-origin <origin>` | none | Accepted `Origin` value for browser-based clients, such as `https://inspector.example`. Repeatable. |
+| `--demo` | off | Serve the [demo site](demo-site.md). Emulator only. |
 
 | Environment variable | Required | Description |
 | --- | --- | --- |
-| `PILLBOX_MASTER_TOKEN` | Yes | Secret of at least 32 characters from which role tokens are derived. |
+| `PILLBOX_MASTER_TOKEN` | Yes, except with `--demo` | Secret of at least 32 characters from which role tokens are derived. |
+| `PILLBOX_ALLOWED_HOSTS` | No | Comma-separated extra `Host` values, like `--allowed-host`. |
+| `PORT` | No | Default for `--listen`. |
+| `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `PILLBOX_MODEL_LABEL`, `PILLBOX_DEMO_START` | No | Demo site settings; see [demo site](demo-site.md#configuration). |
 
 ## HTTP endpoints
 
@@ -99,6 +103,7 @@ arto-pillbox tokens
 | `POST /mcp` | Bearer role token | MCP Streamable HTTP endpoint. |
 | `GET /mcp`, `DELETE /mcp` | Bearer role token | 405: the server is stateless. |
 | `GET /healthz` | none | 200 when the board is ready, 503 otherwise. No body. |
+| `GET /`, `/api/*` | none | Demo site, only with `--demo`. See [demo site](demo-site.md#http-routes). |
 
 ## Schedule
 
