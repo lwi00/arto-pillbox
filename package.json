@@ -1,0 +1,31 @@
+{
+  "name": "arto-pillbox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A connected pillbox exposed to Alexa+ as a self-hosted MCP server (spec 2025-11-25, Streamable HTTP), built on Arto",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "arto-pillbox": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js serve",
+    "tokens": "node dist/main.js tokens",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "arto-mcp": "git+https://github.com/lwi00/arto.git#1fc418d0898134c6497675693a2e92ff0074b0b4",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

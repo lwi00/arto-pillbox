@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "pillbox",
+  "name": "Arto Pillbox (push-button stand-in)",
+  "description": "Development wiring. A push button on D2 with INPUT_PULLUP stands in for the lid: pressed (0) means open, released (1) means closed. Reminder LED on D8. Active buzzer on D9.",
+  "board": "arduino-uno",
+  "components": [
+    { "id": "lid", "label": "Lid stand-in button", "pin": 2, "kind": "digital-input", "pullup": true, "description": "0 = pressed = open, 1 = released = closed" },
+    { "id": "reminder_led", "label": "Reminder light", "pin": 8, "kind": "digital-output" },
+    { "id": "buzzer", "label": "Reminder buzzer", "pin": 9, "kind": "digital-output", "description": "Active buzzer; sounds while HIGH" }
+  ],
+  "interlocks": [
+    { "input": "lid", "output": "buzzer", "blockedValue": 0 }
+  ]
+}

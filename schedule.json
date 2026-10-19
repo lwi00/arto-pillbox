@@ -1,0 +1,8 @@
+{
+  "timeZone": "Europe/Paris",
+  "lateAfterMinutes": 30,
+  "slots": [
+    { "id": "morning", "label": "Morning pills", "opens": "07:00", "due": "09:00", "closes": "11:00" },
+    { "id": "evening", "label": "Evening pills", "opens": "19:00", "due": "20:00", "closes": "22:00" }
+  ]
+}

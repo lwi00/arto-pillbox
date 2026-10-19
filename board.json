@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "pillbox",
+  "name": "Arto Pillbox",
+  "description": "Single-compartment pillbox. Lid reed switch on D2 with INPUT_PULLUP: 0 means closed, 1 means open. Reminder LED on D8. Active buzzer on D9.",
+  "board": "arduino-uno",
+  "components": [
+    { "id": "lid", "label": "Pillbox lid", "pin": 2, "kind": "digital-input", "pullup": true, "description": "0 = closed, 1 = open" },
+    { "id": "reminder_led", "label": "Reminder light", "pin": 8, "kind": "digital-output" },
+    { "id": "buzzer", "label": "Reminder buzzer", "pin": 9, "kind": "digital-output", "description": "Active buzzer; sounds while HIGH" }
+  ],
+  "interlocks": [
+    { "input": "lid", "output": "buzzer", "blockedValue": 1 }
+  ]
+}
